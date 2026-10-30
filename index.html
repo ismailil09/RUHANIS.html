@@ -3377,6 +3377,10 @@ tbody td.muted{color:var(--text3);}
       .sm-fail{color:var(--red);font-weight:700;}
       .pay-badge[class*="due"]{background:rgba(248,81,73,.15);color:var(--red);}
       .sm-inactive{opacity:.55;}
+      .note-peek{cursor:pointer;display:flex;flex-direction:column;gap:2px;max-width:130px;}
+      .note-peek .np-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+      .note-peek .np-more{font-size:10px;color:#58a6ff;font-weight:700;}
+      .note-peek:hover .np-more{text-decoration:underline;}
       .sm-click{cursor:pointer;transition:transform .12s,border-color .12s;}
       .sm-click:hover{transform:translateY(-2px);border-color:var(--gold);}
       #page-salesmen .page-header,#page-baki .page-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
@@ -8408,6 +8412,28 @@ function _groupSalesRows(rows){
   return order.map(k=>map.get(k));
 }
 
+function _notePeek(t){
+  t=String(t||'').replace(/\s+/g,' ').trim();
+  const cut=t.length>16?t.slice(0,16).trimEnd()+'…':t;
+  return cut.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function viewOrderNote(id){
+  const src=(Array.isArray(_salesFilteredRows)&&_salesFilteredRows.length?_salesFilteredRows:[]).concat(Array.isArray(window.allSales)?window.allSales:[]);
+  const r=src.find(x=>String(x.id)===String(id)); if(!r) return;
+  const esc=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let m=document.getElementById('modal-note-view');
+  if(!m){
+    m=document.createElement('div'); m.className='modal-overlay'; m.id='modal-note-view';
+    m.onclick=e=>{ if(e.target===m) closeModal('note-view'); };
+    m.innerHTML='<div class="modal-box modal" style="max-width:560px;"><div class="modal-header"><span class="modal-title" id="nv-title">📝 Notes</span><button class="modal-close" onclick="closeModal(\'note-view\')">✕</button></div><div class="modal-body" id="nv-body" style="max-height:65vh;overflow:auto;"></div><div class="modal-footer"><button class="btn" id="nv-copy">📋 কপি</button><button class="btn btn-gold" onclick="closeModal(\'note-view\')">বন্ধ করুন</button></div></div>';
+    document.body.appendChild(m);
+  }
+  document.getElementById('nv-title').textContent='📝 Order #'+r.id+' — '+(r.customer||'');
+  const box=(label,txt,color,icon)=>txt?`<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${color};margin-bottom:6px;">${icon} ${label}</div><div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word;color:var(--text);">${esc(txt)}</div></div>`:'';
+  document.getElementById('nv-body').innerHTML=box('NOTES (কুরিয়ারে যায়)',r.notes,'var(--text3)','📦')+box('DESCRIPTION (শুধু আমরা দেখব — কুরিয়ারে যায়নি)',r.description,'var(--gold)','🔒')||'<div style="color:var(--text3);text-align:center;padding:20px;">কোনো লেখা নেই</div>';
+  document.getElementById('nv-copy').onclick=()=>{ const t=[r.notes?('Notes: '+r.notes):'',r.description?('Description: '+r.description):''].filter(Boolean).join('\n\n'); try{ navigator.clipboard.writeText(t); showToast('✅ কপি হয়েছে'); }catch(e){ showToast('কপি করা যায়নি','error'); } };
+  openModal('note-view');
+}
 function _renderSalesPage() {
   const start = (_salesPage - 1) * SALES_PAGE_SIZE;
   const slice = _salesFilteredRows.slice(start, start + SALES_PAGE_SIZE);
@@ -8437,7 +8463,7 @@ function _renderSalesPage() {
       <td>${r.courier||'—'}</td>
       <td class="mono muted" style="font-size:11px;">${r.tracking||'—'}</td>
       <td><span class="status ${(()=>{const ds=(r.delStatus||'Not Sent').trim();if(ds==='Delivered')return 'delivered';if(ds==='Returned')return 'returned';if(ds==='Out for Delivery'||ds==='In Transit')return 'intransit';if(ds==='Sent')return 'processing';if(ds==='Failed Delivery')return 'cancelled';return 'pending';})()}">${r.delStatus||'Not Sent'}</span></td>
-      <td class="muted" style="font-size:11px;max-width:120px;white-space:normal;">${r.notes||'—'}${r.description?`<div style="margin-top:3px;padding-top:3px;border-top:1px dashed rgba(212,160,23,.3);color:var(--gold);" title="🔒 শুধু আমরা দেখব — কুরিয়ারে যায়নি">🔒 ${r.description}</div>`:''}</td>
+      <td class="muted" style="font-size:11px;max-width:130px;">${(r.notes||r.description)?`<div class="note-peek" onclick="viewOrderNote('${String(r.id).replace(/'/g,'')}')" title="পুরো লেখা পড়তে ক্লিক করুন">${r.notes?`<span class="np-line">${_notePeek(r.notes)}</span>`:''}${r.description?`<span class="np-line" style="color:var(--gold);">🔒 ${_notePeek(r.description)}</span>`:''}<span class="np-more">পড়ুন ›</span></div>`:'—'}</td>
       <td style="display:flex;gap:4px;">
         <button class="btn" style="padding:4px 8px;font-size:11px;background:var(--gold);color:#000;border-color:var(--gold);font-weight:700;" onclick='openInvoice(${JSON.stringify(r)})' title="Invoice/ক্যাশ মেমো প্রিন্ট">🖨️</button>
         <button class="btn" style="padding:4px 10px;font-size:11px;" onclick='openEditOrder(${JSON.stringify(r)})'>✏️ Edit</button>
