@@ -2487,6 +2487,7 @@ tbody td.muted{color:var(--text3);}
             <option>Returned</option>
             <option>Cancelled</option>
           </select>
+          <select class="filter-select" id="sales-salesman-filter" onchange="filterSales()"><option value="">All Salesmen</option></select>
           <select class="filter-select" id="sales-div-filter" onchange="filterSales()">
             <option value="">All Division</option>
             <option>Dhaka</option>
@@ -3376,6 +3377,8 @@ tbody td.muted{color:var(--text3);}
       .sm-fail{color:var(--red);font-weight:700;}
       .pay-badge[class*="due"]{background:rgba(248,81,73,.15);color:var(--red);}
       .sm-inactive{opacity:.55;}
+      .sm-click{cursor:pointer;transition:transform .12s,border-color .12s;}
+      .sm-click:hover{transform:translateY(-2px);border-color:var(--gold);}
       #page-salesmen .page-header,#page-baki .page-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
       #page-salesmen .page-title,#page-baki .page-title{font-size:20px;font-weight:700;}
       #page-salesmen .page-sub,#page-baki .page-sub{font-size:12px;color:var(--text3);margin-top:2px;}
@@ -3398,19 +3401,21 @@ tbody td.muted{color:var(--text3);}
       <div class="sm-kpis" id="sm-kpis"></div>
       <div class="card" style="padding:0;overflow:hidden;">
         <div class="sm-bar">
-          <div><label>মাস বাছুন</label><input type="month" class="form-input" id="sm-month" oninput="smPeriod(this.value)"></div>
-          <div><button class="btn" onclick="smAll()">সব সময়</button></div>
-          <div><button class="btn" onclick="smThisMonth()">এই মাস</button></div>
+          <div><label>👔 Salesman</label><select class="form-select" id="sm-f-sel" onchange="smSet('sm',this.value)"></select></div>
+          <div><label>📅 মাস</label><select class="form-select" id="sm-f-month" onchange="smSet('ym',this.value)"></select></div>
+          <div><label>তারিখ থেকে</label><input type="date" class="form-input" id="sm-f-from" onchange="smSet('from',this.value)"></div>
+          <div><label>তারিখ পর্যন্ত</label><input type="date" class="form-input" id="sm-f-to" onchange="smSet('to',this.value)"></div>
+          <div><button class="btn" onclick="smThisMonth()">এই মাস</button> <button class="btn" onclick="smClear()">✕ ফিল্টার মুছুন</button></div>
           <span id="sm-period-label" style="color:var(--text3);font-size:12px;margin-left:auto;"></span>
         </div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Salesman</th><th style="text-align:right;">মোট অর্ডার</th><th style="text-align:right;">✅ Delivered</th><th style="text-align:right;">⏳ চলমান</th><th style="text-align:right;">❌ ফেল (Return/Cancel)</th><th style="text-align:right;">সফলতা</th><th style="text-align:right;">বিক্রয় (Delivered)</th><th style="text-align:right;">প্রতি সেল</th><th style="text-align:right;">কমিশন</th><th style="text-align:right;">মাসিক বেতন</th><th style="text-align:right;">মোট প্রদেয়</th><th></th></tr></thead>
-            <tbody id="sm-body"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:40px;">লোড হচ্ছে…</td></tr></tbody>
+            <thead><tr><th>Salesman</th><th style="text-align:right;">মোট অর্ডার</th><th style="text-align:right;">✅ Delivered</th><th style="text-align:right;">⏳ চলমান</th><th style="text-align:right;">❌ ফেল (Return/Cancel)</th><th style="text-align:right;">সফলতা</th><th style="text-align:right;">বিক্রয় (Delivered)</th><th style="text-align:right;">প্রতি সেল</th><th style="text-align:right;">কমিশন</th><th style="text-align:right;">বেতন (মাস×বেতন)</th><th style="text-align:right;">মোট প্রদেয়</th><th style="text-align:right;">✅ পরিশোধ</th><th style="text-align:right;">⏳ বাকি পাওনা</th><th></th></tr></thead>
+            <tbody id="sm-body"><tr><td colspan="14" style="text-align:center;color:var(--text3);padding:40px;">লোড হচ্ছে…</td></tr></tbody>
             <tfoot id="sm-foot"></tfoot>
           </table>
         </div>
-        <div class="sm-note">📐 কমিশন = Delivered অর্ডার × প্রতি সেলের টাকা · মোট প্রদেয় = কমিশন + মাসিক বেতন (বেতন শুধু নির্দিষ্ট মাস বাছলে যোগ হয়) · ফেল = Returned + Cancelled · নাম ক্লিক করলে ওই Salesman-এর অর্ডার তালিকা দেখা যাবে</div>
+        <div class="sm-note">📐 কমিশন = Delivered অর্ডার × প্রতি সেলের টাকা · মোট প্রদেয় = কমিশন + (মাস সংখ্যা × মাসিক বেতন) · বাকি পাওনা = মোট প্রদেয় − পরিশোধ · উপরের কার্ডগুলোতে ক্লিক করলে বিস্তারিত দেখাবে · ফেল = Returned + Cancelled · নাম ক্লিক করলে ওই Salesman-এর অর্ডার তালিকা দেখা যাবে</div>
       </div>
     </div>
 
@@ -3491,6 +3496,22 @@ tbody td.muted{color:var(--text3);}
           </div>
         </div>
         <div class="modal-footer"><button class="btn" onclick="closeModal('sm-import')">বাতিল</button><button class="btn btn-gold" id="sm-imp-go" style="display:none;" onclick="smImpGo()">📥 Import করুন</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-sm-pay" onclick="if(event.target===this)closeModal('sm-pay')">
+      <div class="modal-box modal" style="max-width:480px;">
+        <div class="modal-header"><span class="modal-title" id="sm-pay-title">💸 পরিশোধ</span><button class="modal-close" onclick="closeModal('sm-pay')">✕</button></div>
+        <div class="modal-body">
+          <div id="sm-pay-info" style="padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:13px;line-height:1.8;margin-bottom:12px;"></div>
+          <div class="form-grid" style="margin-bottom:12px;">
+            <div class="form-group"><label class="form-label">কোন মাসের পাওনা</label><input type="month" class="form-input" id="sm-pay-month" oninput="smPayInfo()"></div>
+            <div class="form-group"><label class="form-label">দেওয়ার তারিখ</label><input type="date" class="form-input" id="sm-pay-date"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;"><label class="form-label">টাকার পরিমাণ (৳) *</label><input type="number" min="0" step="0.01" class="form-input" id="sm-pay-amt"></div>
+          <div class="form-group"><label class="form-label">নোট</label><input class="form-input" id="sm-pay-note" maxlength="300" placeholder="যেমন: বিকাশে দেওয়া হয়েছে / আংশিক পরিশোধ"></div>
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="closeModal('sm-pay')">বাতিল</button><button class="btn btn-gold" id="sm-pay-save" onclick="smPaySave()">✅ পরিশোধ সেভ করুন</button></div>
       </div>
     </div>
 
@@ -5853,7 +5874,7 @@ tbody td.muted{color:var(--text3);}
 // ═══════════════════════════════════════════════════════════════
 
 // ⚠️ এখানে আপনার Google Apps Script Web App URL বসান (Deploy > New Deployment > Web App)
-      const API_URL = "https://script.google.com/macros/s/AKfycbzh3XdtIapIRlMsZxd8_UTGT-PXOBzBZ1SHkK1zUPEkve4H4pT6cchxqP_NBDuv_be7/exec"; // ← এই URL পরিবর্তন করুন // ← এখানে আপনার Google Apps Script URL বসান
+      const API_URL = "https://script.google.com/macros/s/AKfycbzDdmUlUBTPey5-pJdCl3JqSpe2goNqxVXkYsfw5tz45cLDexjsaDsiZ8pJZmB45pQF/exec"; // ← এই URL পরিবর্তন করুন // ← এখানে আপনার Google Apps Script URL বসান
 
 // ─── CONNECTION STATE ────────────────────────────────────────
 let apiConnected = false;
@@ -12002,6 +12023,9 @@ function _filterSalesNow(){
     const statusMatch=!statusF||statusF==='All Status'||rStatus===statusF;
     const divMatch=!divF||divF==='All Division'||rDiv===divF;
     const prodMatch=!prodF||prodF==='All Products'||rProd===prodF;
+    const salesF=(document.getElementById('sales-salesman-filter')?.value)||'';
+    const rSm=String(r.salesman||'').trim();
+    const salesmanMatch=!salesF||(salesF==='__none__'?!rSm:rSm.toLowerCase()===salesF.toLowerCase());
     const searchMatch=!searchF||rCust.includes(searchF)||rPhone.includes(searchF)||rProd.toLowerCase().includes(searchF);
     let dateMatch=true;
     if(dateF){
@@ -12014,7 +12038,7 @@ function _filterSalesNow(){
       const rawISO=String(r.rawDateISO||r.rawDate||'');
       dateMatch=String(r.date||'').includes(dStr)||rawISO.startsWith(isoPrefix)||rawISO===dateF;
     }
-    return statusMatch&&divMatch&&prodMatch&&searchMatch&&dateMatch;
+    return statusMatch&&divMatch&&prodMatch&&salesmanMatch&&searchMatch&&dateMatch;
   });
   renderSalesRows(filtered);
   document.getElementById('sales-count').textContent=filtered.length+' records';
@@ -17368,10 +17392,10 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
   const MON = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
   const MON_BN = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const toast = (m, t) => { try { showToast(m, t || 'success'); } catch (e) {} };
-  const SM = { list: [], loaded: false, ym: '', rows: [], busy: false, editId: null, lastLoad: 0 };
+  const SM = { list: [], pays: [], loaded: false, f: { sm: '', ym: '', from: '', to: '' }, rows: [], busy: false, editId: null, lastLoad: 0 };
   const BK = { rows: [], cur: null, busy: false };
   const todayYM = () => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date()).slice(0, 7); } catch (e) { return new Date().toISOString().slice(0, 7); } };
-  SM.ym = todayYM();
+  SM.f.ym = todayYM();
   const FAIL = ['Returned', 'Cancelled'], ACTIVE = ['Pending', 'Processing', 'In Transit'];
 
   function ordParts(o) {
@@ -17394,12 +17418,14 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
   async function loadSalesmen() {
     try {
       const d = await fetchFromAPI('salesmen');
-      if (d && Array.isArray(d.data)) { SM.list = d.data; SM.loaded = true; SM.lastLoad = Date.now(); }
+      if (d && Array.isArray(d.data)) { SM.list = d.data; SM.pays = Array.isArray(d.payments) ? d.payments : []; SM.loaded = true; SM.lastLoad = Date.now(); }
     } catch (e) {}
     fillOrderSelect();
     return SM.list;
   }
   function fillOrderSelect(cur) {
+    const fsel = $('sales-salesman-filter');
+    if (fsel) { const keep = fsel.value; fsel.innerHTML = '<option value="">All Salesmen</option>' + SM.list.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('') + '<option value="__none__">— Salesman ছাড়া —</option>'; fsel.value = keep; }
     const sel = $('order-salesman'); if (!sel) return;
     if (cur === undefined) cur = sel.value || '';
     const names = SM.list.filter(s => s.active).map(s => s.name);
@@ -17409,14 +17435,34 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
   }
 
   // ───────── হিসাব ─────────
-  function compute() {
-    const period = SM.ym || '';
+  const ym2 = (y, m) => y + '-' + String(m).padStart(2, '0');
+  const curYM = () => todayYM();
+  function ymRange(a, b) { const out = []; if (!a || !b || a > b) return out; let [y, m] = a.split('-').map(Number); const [y2, m2] = b.split('-').map(Number); while (y < y2 || (y === y2 && m <= m2)) { out.push(ym2(y, m)); m++; if (m > 12) { m = 1; y++; } if (out.length > 600) break; } return out; }
+  const ordKey = o => { const p = ordParts(o); return p ? p.y * 10000 + p.m * 100 + p.d : 0; };
+  const isoKey = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? (+m[1]) * 10000 + (+m[2]) * 100 + (+m[3]) : 0; };
+  const payYM = p => (p.period && /^\d{4}-\d{2}$/.test(p.period)) ? p.period : String(p.date || '').slice(0, 7);
+  const srcName = s => s || '';
+  function firstOrderYM(name) {
+    const key = String(name).toLowerCase(); let best = '';
+    allOrders().forEach(o => { if (String(o.salesman || '').trim().toLowerCase() === key) { const y = ordYM(o); if (y && (!best || y < best)) best = y; } });
+    return best;
+  }
+  function filterMonths(f, startYM) {
+    const now = curYM();
+    if (f.from || f.to) { const a = f.from ? f.from.slice(0, 7) : (startYM || now), b = f.to ? f.to.slice(0, 7) : now; return ymRange(a, b); }
+    if (f.ym) return [f.ym];
+    return ymRange(startYM || now, now);
+  }
+  function compute(f) {
+    f = f || SM.f;
+    const now = curYM(), fromK = isoKey(f.from), toK = isoKey(f.to), ranged = !!(f.from || f.to), hasYM = !ranged && !!f.ym;
     const map = {};
-    const mk = (s, ghost) => ({ s, name: s ? s.name : 'কেউ না (Salesman ছাড়া)', perSale: s ? Number(s.perSale) || 0 : 0, salary: s ? Number(s.salary) || 0 : 0, active: s ? s.active !== false : true, none: !s, ghost: !!ghost, orders: [], total: 0, delivered: 0, running: 0, failed: 0, sales: 0 });
+    const mk = (s, ghost) => ({ s, name: s ? s.name : 'কেউ না (Salesman ছাড়া)', perSale: s ? Number(s.perSale) || 0 : 0, salary: s ? Number(s.salary) || 0 : 0, active: s ? s.active !== false : true, none: !s, ghost: !!ghost, orders: [], pays: [], total: 0, delivered: 0, running: 0, failed: 0, sales: 0, months: 0, paid: 0 });
     SM.list.forEach(s => { map[s.name.toLowerCase()] = mk(s); });
     const none = mk(null);
     allOrders().forEach(o => {
-      if (period && ordYM(o) !== period) return;
+      if (ranged) { const k = ordKey(o); if (!k || (fromK && k < fromK) || (toK && k > toK)) return; }
+      else if (hasYM && ordYM(o) !== f.ym) return;
       const nm = String(o.salesman || '').trim(), key = nm.toLowerCase();
       let t = none;
       if (key) t = map[key] || (map[key] = mk({ name: nm, perSale: 0, salary: 0, active: false }, true));
@@ -17425,53 +17471,84 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
       else if (FAIL.includes(o.status)) t.failed++;
       else t.running++;
     });
-    const rows = Object.keys(map).map(k => map[k]).filter(t => t.active || t.total > 0);
-    rows.forEach(t => { t.commission = t.delivered * t.perSale; t.paySalary = period ? t.salary : 0; t.payable = t.commission + t.paySalary; });
-    rows.sort((a, b) => b.delivered - a.delivered || b.total - a.total || a.name.localeCompare(b.name));
-    if (none.total > 0) { none.commission = 0; none.paySalary = 0; none.payable = 0; rows.push(none); }
-    return rows;
+    const rows = Object.keys(map).map(k => map[k]).filter(t => t.active || t.total > 0 || SM.pays.some(p => p.salesman.toLowerCase() === t.name.toLowerCase()));
+    rows.forEach(t => {
+      const created = t.s && t.s.created ? String(t.s.created).slice(0, 7) : '';
+      const fo = firstOrderYM(t.name);
+      const startYM = [created, fo].filter(Boolean).sort()[0] || now;
+      const months = filterMonths(f, startYM).filter(m => m >= startYM && m <= now);
+      t.months = months.length;
+      const mset = new Set(filterMonths(f, startYM));
+      t.pays = SM.pays.filter(p => p.salesman.toLowerCase() === t.name.toLowerCase() && mset.has(payYM(p)));
+      t.paid = t.pays.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      t.commission = t.delivered * t.perSale; t.paySalary = t.salary * months.length; t.payable = t.commission + t.paySalary;
+      t.remaining = Math.round((t.payable - t.paid) * 100) / 100;
+    });
+    let out = rows.sort((a, b) => b.delivered - a.delivered || b.total - a.total || a.name.localeCompare(b.name));
+    if (none.total > 0) { none.commission = 0; none.paySalary = 0; none.payable = 0; none.paid = 0; none.remaining = 0; out.push(none); }
+    if (f.sm === '__none__') out = out.filter(t => t.none);
+    else if (f.sm) out = out.filter(t => !t.none && t.name.toLowerCase() === f.sm.toLowerCase());
+    return out;
   }
-  const periodLabel = () => { const m = /^(\d{4})-(\d{2})$/.exec(SM.ym || ''); return m ? `${MON_BN[+m[2] - 1]} ${m[1]}` : 'সব সময়'; };
+  const monthLabel = m => { const x = /^(\d{4})-(\d{2})$/.exec(m || ''); return x ? `${MON_BN[+x[2] - 1]} ${x[1]}` : ''; };
+  const periodLabel = f => { f = f || SM.f; if (f.from || f.to) return `${f.from || '…'} থেকে ${f.to || 'আজ'}`; return f.ym ? monthLabel(f.ym) : 'সব সময়'; };
+  function monthOptions() {
+    const set = new Set([curYM()]);
+    allOrders().forEach(o => { const y = ordYM(o); if (y) set.add(y); });
+    SM.pays.forEach(p => { const y = payYM(p); if (y) set.add(y); });
+    if (SM.f.ym) set.add(SM.f.ym);
+    return Array.from(set).sort().reverse();
+  }
 
   // ───────── Salesmen পেজ ─────────
   function render() {
     const body = $('sm-body'); if (!body) return;
     const rows = SM.rows = compute();
-    if ($('sm-month')) $('sm-month').value = SM.ym || '';
-    if ($('sm-period-label')) $('sm-period-label').textContent = '📅 ' + periodLabel() + (SM.ym ? '' : ' — বেতন যোগ হয়নি, মাস বাছুন');
+    // ফিল্টার বার
+    const sel = $('sm-f-sel'), mon = $('sm-f-month');
+    if (sel) { sel.innerHTML = '<option value="">👥 সব Salesman</option>' + SM.list.map(s => `<option value="${esc(s.name)}">${esc(s.name)}${s.active ? '' : ' (নিষ্ক্রিয়)'}</option>`).join('') + '<option value="__none__">— Salesman ছাড়া —</option>'; sel.value = SM.f.sm || ''; }
+    if (mon) { mon.innerHTML = '<option value="">📅 সব সময়</option>' + monthOptions().map(m => `<option value="${m}">${monthLabel(m)}</option>`).join(''); mon.value = (SM.f.from || SM.f.to) ? '' : (SM.f.ym || ''); }
+    if ($('sm-f-from')) { $('sm-f-from').value = SM.f.from || ''; $('sm-f-to').value = SM.f.to || ''; }
+    if ($('sm-period-label')) $('sm-period-label').textContent = '📅 ' + periodLabel() + (SM.f.sm ? ' · ' + (SM.f.sm === '__none__' ? 'Salesman ছাড়া' : SM.f.sm) : '');
     const real = rows.filter(r => !r.none);
-    const T = real.reduce((a, r) => ({ total: a.total + r.total, del: a.del + r.delivered, run: a.run + r.running, fail: a.fail + r.failed, sales: a.sales + r.sales, comm: a.comm + r.commission, sal: a.sal + r.paySalary, pay: a.pay + r.payable }), { total: 0, del: 0, run: 0, fail: 0, sales: 0, comm: 0, sal: 0, pay: 0 });
+    const T = SM.T = real.reduce((a, r) => ({ total: a.total + r.total, del: a.del + r.delivered, run: a.run + r.running, fail: a.fail + r.failed, sales: a.sales + r.sales, comm: a.comm + r.commission, sal: a.sal + r.paySalary, pay: a.pay + r.payable, paid: a.paid + r.paid, rem: a.rem + r.remaining }), { total: 0, del: 0, run: 0, fail: 0, sales: 0, comm: 0, sal: 0, pay: 0, paid: 0, rem: 0 });
+    const allTotal = rows.reduce((s, r) => s + r.total, 0);
     $('sm-kpis').innerHTML = [
-      ['👔 সক্রিয় Salesman', SM.list.filter(s => s.active).length],
-      ['🛒 মোট অর্ডার (Salesman সহ)', T.total],
-      ['✅ Delivered', T.del],
-      ['❌ ফেল', `<span class="sm-fail">${T.fail}</span>`],
-      ['💵 বিক্রয় (Delivered)', tk(T.sales)],
-      ['💰 মোট প্রদেয় (বেতন+কমিশন)', tk(T.pay)],
-    ].map(k => `<div class="sm-kpi"><small>${k[0]}</small><strong>${k[1]}</strong></div>`).join('');
+      ['sal', '👔 সক্রিয় Salesman', SM.list.filter(s => s.active).length],
+      ['orders', '🛒 মোট অর্ডার', allTotal],
+      ['del', '✅ Delivered', T.del],
+      ['fail', '❌ ফেল', `<span class="sm-fail">${T.fail}</span>`],
+      ['sales', '💵 বিক্রয় (Delivered)', tk(T.sales)],
+      ['pay', '💰 মোট প্রদেয়', tk(T.pay)],
+      ['paid', '✅ পরিশোধ করা হয়েছে', `<span style="color:var(--green)">${tk(T.paid)}</span>`],
+      ['rem', '⏳ বাকি পাওনা', `<span style="color:${T.rem > 0 ? 'var(--red)' : 'var(--green)'}">${tk(T.rem)}</span>`],
+    ].map(k => `<div class="sm-kpi sm-click" onclick="smKpi('${k[0]}')" title="বিস্তারিত দেখুন"><small>${k[1]}</small><strong>${k[2]}</strong></div>`).join('');
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:40px;">${SM.list.length ? 'এই সময়ে কোনো অর্ডার নেই' : 'এখনো কোনো Salesman যোগ করা হয়নি — "＋ নতুন Salesman" চাপুন'}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:40px;">${SM.list.length ? 'এই ফিল্টারে কোনো অর্ডার নেই' : 'এখনো কোনো Salesman যোগ করা হয়নি — "＋ নতুন Salesman" চাপুন'}</td></tr>`;
       $('sm-foot').innerHTML = ''; return;
     }
     body.innerHTML = rows.map((t, i) => {
-      const rate = t.total ? Math.round(t.delivered / Math.max(1, t.delivered + t.failed) * 100) : 0;
+      const rate = t.delivered + t.failed ? Math.round(t.delivered / (t.delivered + t.failed) * 100) + '%' : '—';
       const nameCell = t.none ? `<span style="color:var(--text3);">${esc(t.name)}</span>` : `<span class="sm-link" onclick="smDrill(${i})">${esc(t.name)}</span>${t.active ? '' : ' <span class="sm-tag" style="background:rgba(139,148,158,.2);color:var(--text3);">নিষ্ক্রিয়</span>'}${t.ghost ? ' <span class="sm-tag" style="background:rgba(248,81,73,.15);color:var(--red);">তালিকায় নেই</span>' : ''}`;
+      const remCol = t.remaining > 0 ? 'var(--red)' : (t.remaining < 0 ? 'var(--blue)' : 'var(--green)');
       return `<tr class="${t.active ? '' : 'sm-inactive'}">
         <td>${nameCell}</td>
         <td class="mono" style="text-align:right;">${t.total}</td>
         <td class="mono" style="text-align:right;color:var(--green);">${t.delivered}</td>
         <td class="mono" style="text-align:right;">${t.running}</td>
         <td class="mono ${t.failed ? 'sm-fail' : ''}" style="text-align:right;">${t.failed}</td>
-        <td class="mono" style="text-align:right;">${t.none ? '—' : (t.delivered + t.failed ? rate + '%' : '—')}</td>
+        <td class="mono" style="text-align:right;">${t.none ? '—' : rate}</td>
         <td class="mono" style="text-align:right;">${tk(t.sales)}</td>
         <td class="mono" style="text-align:right;">${t.none ? '—' : tk(t.perSale)}</td>
         <td class="mono" style="text-align:right;">${t.none ? '—' : tk(t.commission)}</td>
-        <td class="mono" style="text-align:right;">${t.none ? '—' : (SM.ym ? tk(t.salary) : '<span style="color:var(--text3)" title="মাস বাছলে যোগ হবে">(' + tk(t.salary) + '/মাস)</span>')}</td>
+        <td class="mono" style="text-align:right;">${t.none ? '—' : `${tk(t.paySalary)}<div style="font-size:10px;color:var(--text3);">${t.months} মাস × ${tk(t.salary)}</div>`}</td>
         <td class="mono" style="text-align:right;font-weight:700;color:var(--gold);">${t.none ? '—' : tk(t.payable)}</td>
-        <td>${t.none || t.ghost ? '' : `<button class="btn" style="padding:4px 10px;font-size:11px;" onclick="smOpenEdit(${t.s.id})">✏️</button>`}</td>
+        <td class="mono" style="text-align:right;color:var(--green);">${t.none ? '—' : tk(t.paid)}</td>
+        <td class="mono" style="text-align:right;font-weight:700;color:${remCol};">${t.none ? '—' : tk(t.remaining)}${!t.none && t.remaining < 0 ? '<div style="font-size:10px;font-weight:400;">অগ্রিম/বেশি দেওয়া</div>' : ''}</td>
+        <td style="white-space:nowrap;">${t.none || t.ghost ? '' : `<button class="btn btn-gold" style="padding:4px 10px;font-size:11px;" onclick="smPay(${i})">💸 পরিশোধ</button> <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="smHist(${i})" title="পরিশোধের ইতিহাস">📜</button> <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="smOpenEdit(${t.s.id})" title="Edit">✏️</button>`}</td>
       </tr>`;
     }).join('');
-    $('sm-foot').innerHTML = `<tr style="font-weight:700;border-top:2px solid var(--border);"><td>মোট</td><td class="mono" style="text-align:right;">${T.total}</td><td class="mono" style="text-align:right;color:var(--green);">${T.del}</td><td class="mono" style="text-align:right;">${T.run}</td><td class="mono sm-fail" style="text-align:right;">${T.fail}</td><td></td><td class="mono" style="text-align:right;">${tk(T.sales)}</td><td></td><td class="mono" style="text-align:right;">${tk(T.comm)}</td><td class="mono" style="text-align:right;">${SM.ym ? tk(T.sal) : '—'}</td><td class="mono" style="text-align:right;color:var(--gold);">${tk(T.pay)}</td><td></td></tr>`;
+    $('sm-foot').innerHTML = `<tr style="font-weight:700;border-top:2px solid var(--border);"><td>মোট</td><td class="mono" style="text-align:right;">${allTotal}</td><td class="mono" style="text-align:right;color:var(--green);">${T.del}</td><td class="mono" style="text-align:right;">${T.run}</td><td class="mono sm-fail" style="text-align:right;">${T.fail}</td><td></td><td class="mono" style="text-align:right;">${tk(T.sales)}</td><td></td><td class="mono" style="text-align:right;">${tk(T.comm)}</td><td class="mono" style="text-align:right;">${tk(T.sal)}</td><td class="mono" style="text-align:right;color:var(--gold);">${tk(T.pay)}</td><td class="mono" style="text-align:right;color:var(--green);">${tk(T.paid)}</td><td class="mono" style="text-align:right;color:${T.rem > 0 ? 'var(--red)' : 'var(--green)'};">${tk(T.rem)}</td><td></td></tr>`;
   }
   async function openPage() {
     render();
@@ -17479,15 +17556,84 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
     render(); refreshDash();
   }
   async function reload() { await Promise.all([ensureSales(true), loadSalesmen()]); render(); refreshDash(); toast('✅ রিফ্রেশ হয়েছে'); }
+  function setF(k, v) { if (k === 'ym') { SM.f.ym = v || ''; SM.f.from = ''; SM.f.to = ''; } else if (k === 'from' || k === 'to') { SM.f[k] = v || ''; if (SM.f.from || SM.f.to) SM.f.ym = ''; } else SM.f[k] = v || ''; render(); }
+  function clearF() { SM.f = { sm: '', ym: '', from: '', to: '' }; render(); }
 
+  // অর্ডারের তালিকা (Salesman কলামসহ)
+  function orderTable(list, showSm) {
+    const st = s => `<span class="status ${String(s || '').toLowerCase().replace(/ /g, '')}">${esc(s)}</span>`;
+    const L = list.slice().sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+    return `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>তারিখ</th><th>গ্রাহক</th><th>পণ্য</th>${showSm ? '<th>Salesman</th>' : ''}<th style="text-align:right;">মোট</th><th>Status</th></tr></thead><tbody>${L.map(o => `<tr><td class="mono">${esc(o.id)}</td><td class="mono">${esc(o.date)}</td><td>${esc(o.customer)}</td><td>${(o.items || [{ product: o.product }]).map(x => esc(x.product)).join(', ')}</td>${showSm ? `<td>${o.salesman ? `<span class="sm-tag">${esc(o.salesman)}</span>` : '—'}</td>` : ''}<td class="mono" style="text-align:right;">${tk(o.total)}</td><td>${st(o.status)}</td></tr>`).join('') || `<tr><td colspan="${showSm ? 7 : 6}" style="text-align:center;color:var(--text3);padding:20px;">কোনো অর্ডার নেই</td></tr>`}</tbody></table></div>`;
+  }
+  function showDrill(title, html) { $('sm-drill-title').textContent = title; $('sm-drill-body').innerHTML = html; openModal('sm-drill'); }
   function drill(i) {
     const t = SM.rows[i]; if (!t) return;
-    $('sm-drill-title').textContent = `👔 ${t.name} — ${periodLabel()} (${t.total}টি অর্ডার)`;
-    const st = s => `<span class="status ${String(s || '').toLowerCase().replace(/ /g, '')}">${esc(s)}</span>`;
-    const list = t.orders.slice().sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
-    $('sm-drill-body').innerHTML = `<div style="margin-bottom:10px;font-size:13px;">✅ Delivered <b style="color:var(--green)">${t.delivered}</b> · ⏳ চলমান <b>${t.running}</b> · ❌ ফেল <b class="sm-fail">${t.failed}</b></div>
-      <div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>তারিখ</th><th>গ্রাহক</th><th>পণ্য</th><th style="text-align:right;">মোট</th><th>Status</th></tr></thead><tbody>${list.map(o => `<tr><td class="mono">${esc(o.id)}</td><td class="mono">${esc(o.date)}</td><td>${esc(o.customer)}</td><td>${(o.items || [{ product: o.product }]).map(x => esc(x.product)).join(', ')}</td><td class="mono" style="text-align:right;">${tk(o.total)}</td><td>${st(o.status)}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">কোনো অর্ডার নেই</td></tr>'}</tbody></table></div>`;
-    openModal('sm-drill');
+    showDrill(`👔 ${t.name} — ${periodLabel()} (${t.total}টি অর্ডার)`, `<div style="margin-bottom:10px;font-size:13px;">✅ Delivered <b style="color:var(--green)">${t.delivered}</b> · ⏳ চলমান <b>${t.running}</b> · ❌ ফেল <b class="sm-fail">${t.failed}</b></div>` + orderTable(t.orders, false));
+  }
+  function kpi(k) {
+    const rows = SM.rows, real = rows.filter(r => !r.none), p = periodLabel();
+    const all = rows.reduce((a, r) => a.concat(r.orders), []);
+    if (k === 'sal') {
+      showDrill('👔 Salesman তালিকা', `<div class="table-wrap"><table class="data-table"><thead><tr><th>নাম</th><th>অবস্থা</th><th style="text-align:right;">প্রতি সেল</th><th style="text-align:right;">মাসিক বেতন</th><th style="text-align:right;">এই সময়ে অর্ডার</th><th>নোট</th></tr></thead><tbody>${SM.list.map(s => { const r = real.find(x => x.name.toLowerCase() === s.name.toLowerCase()); return `<tr class="${s.active ? '' : 'sm-inactive'}"><td><b>${esc(s.name)}</b></td><td>${s.active ? '✅ সক্রিয়' : '⏸️ নিষ্ক্রিয়'}</td><td class="mono" style="text-align:right;">${tk(s.perSale)}</td><td class="mono" style="text-align:right;">${tk(s.salary)}</td><td class="mono" style="text-align:right;">${r ? r.total : 0}</td><td>${esc(s.note || '')}</td></tr>`; }).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">কেউ নেই</td></tr>'}</tbody></table></div>`);
+    } else if (k === 'orders') showDrill(`🛒 সব অর্ডার — ${p} (${all.length}টি)`, orderTable(all, true));
+    else if (k === 'del') { const l = all.filter(o => o.status === 'Delivered'); showDrill(`✅ Delivered — ${p} (${l.length}টি)`, orderTable(l, true)); }
+    else if (k === 'fail') { const l = all.filter(o => FAIL.includes(o.status)); showDrill(`❌ ফেল (Returned/Cancelled) — ${p} (${l.length}টি)`, orderTable(l, true)); }
+    else if (k === 'sales') { const l = all.filter(o => o.status === 'Delivered'); showDrill(`💵 বিক্রয় (Delivered) — ${p}`, `<div style="margin-bottom:10px;font-size:13px;">মোট বিক্রয়: <b style="color:var(--gold)">${tk(l.reduce((s, o) => s + (Number(o.total) || 0), 0))}</b> · ${l.length}টি অর্ডার</div>` + orderTable(l, true)); }
+    else if (k === 'pay' || k === 'paid' || k === 'rem') {
+      const rowsH = real.map(t => `<tr><td><b>${esc(t.name)}</b></td><td class="mono" style="text-align:right;">${t.delivered} × ${tk(t.perSale)} = ${tk(t.commission)}</td><td class="mono" style="text-align:right;">${t.months} মাস × ${tk(t.salary)} = ${tk(t.paySalary)}</td><td class="mono" style="text-align:right;color:var(--gold);">${tk(t.payable)}</td><td class="mono" style="text-align:right;color:var(--green);">${tk(t.paid)}</td><td class="mono" style="text-align:right;color:${t.remaining > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700;">${tk(t.remaining)}</td></tr>`).join('');
+      const pl = real.reduce((a, t) => a.concat(t.pays), []).sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id - a.id);
+      showDrill(`💰 প্রদেয় / পরিশোধ / বাকি — ${p}`, `<div class="table-wrap"><table class="data-table"><thead><tr><th>Salesman</th><th style="text-align:right;">কমিশন</th><th style="text-align:right;">বেতন</th><th style="text-align:right;">মোট প্রদেয়</th><th style="text-align:right;">পরিশোধ</th><th style="text-align:right;">বাকি পাওনা</th></tr></thead><tbody>${rowsH || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">কেউ নেই</td></tr>'}</tbody></table></div>
+        <h4 style="margin:16px 0 6px;font-size:13px;">📜 পরিশোধের ইতিহাস (${pl.length}টি)</h4>` + payTable(pl, false));
+    }
+  }
+  function payTable(list, canDel) {
+    return `<div class="table-wrap"><table class="data-table"><thead><tr><th>তারিখ</th><th>Salesman</th><th>কোন মাসের</th><th style="text-align:right;">টাকা</th><th>নোট</th>${canDel ? '<th></th>' : ''}</tr></thead><tbody>${list.map(p => `<tr><td class="mono">${esc(p.date)}</td><td>${esc(p.salesman)}</td><td>${esc(monthLabel(payYM(p)) || payYM(p))}</td><td class="mono" style="text-align:right;color:var(--green);font-weight:700;">${tk(p.amount)}</td><td style="white-space:normal;">${esc(p.note) || '—'}</td>${canDel ? `<td><button class="btn" style="padding:3px 8px;font-size:11px;background:var(--red);color:#fff;border-color:var(--red);" onclick="smPayDel(${p.id})">🗑️</button></td>` : ''}</tr>`).join('') || `<tr><td colspan="${canDel ? 6 : 5}" style="text-align:center;padding:20px;color:var(--text3);">কোনো পরিশোধ নেই</td></tr>`}</tbody></table></div>`;
+  }
+
+  // ───────── পরিশোধ রেকর্ড ─────────
+  const PAY = { t: null, busy: false, cid: '' };
+  const newCid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function openPay(i) {
+    const t = SM.rows[i]; if (!t || t.none) return; PAY.t = t; PAY.cid = newCid();
+    const per = SM.f.ym || curYM();
+    $('sm-pay-title').textContent = '💸 পরিশোধ — ' + t.name;
+    $('sm-pay-month').value = per; $('sm-pay-date').value = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+    $('sm-pay-note').value = ''; payInfo(); openModal('sm-pay');
+  }
+  function payInfo() {
+    const t = PAY.t; if (!t) return;
+    const per = $('sm-pay-month').value || curYM();
+    const f = { sm: t.name, ym: per, from: '', to: '' }, r = compute(f).find(x => x.name === t.name) || t;
+    PAY.rem = Math.max(0, r.remaining);
+    $('sm-pay-info').innerHTML = `<b>${esc(monthLabel(per) || per)}</b> মাসের হিসাব: কমিশন ${tk(r.commission)} + বেতন ${tk(r.paySalary)} = <b style="color:var(--gold)">${tk(r.payable)}</b><br>আগে দেওয়া হয়েছে: <b style="color:var(--green)">${tk(r.paid)}</b> · বাকি পাওনা: <b style="color:${r.remaining > 0 ? 'var(--red)' : 'var(--green)'}">${tk(r.remaining)}</b>`;
+    $('sm-pay-amt').value = PAY.rem || '';
+  }
+  async function paySave() {
+    if (PAY.busy || !PAY.t) return;
+    const amt = parseFloat($('sm-pay-amt').value);
+    if (!(amt > 0)) { toast('⚠️ টাকার পরিমাণ দিন', 'error'); return; }
+    if (!$('sm-pay-date').value) { toast('⚠️ তারিখ দিন', 'error'); return; }
+    if (amt > PAY.rem + 0.001 && !confirm(`বাকি পাওনা ${tk(PAY.rem)} — আপনি ${tk(amt)} দিচ্ছেন (বেশি)। তবুও সেভ করবেন?`)) return;
+    PAY.busy = true; const btn = $('sm-pay-save'); btn.disabled = true;
+    try {
+      const r = await postToAPI({ action: 'addSalesmanPayment', salesman: PAY.t.name, amount: amt, date: $('sm-pay-date').value, period: $('sm-pay-month').value || '', note: $('sm-pay-note').value.trim(), cid: PAY.cid });
+      if (r && r.status !== 'error') {
+        closeModal('sm-pay'); toast(`✅ ${PAY.t.name}-কে ${tk(amt)} পরিশোধ রেকর্ড হয়েছে`);
+        try { logAction(`Salesman পরিশোধ: ${PAY.t.name} — ৳${amt}`); } catch (e) {}
+        await loadSalesmen(); render(); refreshDash();
+      }
+    } finally { PAY.busy = false; btn.disabled = false; }
+  }
+  function hist(i) {
+    const t = SM.rows[i]; if (!t) return;
+    const all = SM.pays.filter(p => p.salesman.toLowerCase() === t.name.toLowerCase()).sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id - a.id);
+    const tot = all.reduce((s, p) => s + p.amount, 0);
+    showDrill(`📜 ${t.name} — পরিশোধের ইতিহাস`, `<div style="margin-bottom:10px;font-size:13px;">মোট দেওয়া হয়েছে (সব সময়): <b style="color:var(--green)">${tk(tot)}</b> · ${all.length}টি</div>` + payTable(all, true));
+  }
+  async function payDel(id) {
+    if (!confirm('এই পরিশোধের রেকর্ডটি মুছে ফেলবেন?')) return;
+    const r = await postToAPI({ action: 'deleteSalesmanPayment', id });
+    if (r && r.status !== 'error') { closeModal('sm-drill'); toast('🗑️ মুছে ফেলা হয়েছে'); await loadSalesmen(); render(); refreshDash(); }
   }
 
   function openEdit(id) {
@@ -17534,9 +17680,9 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
 
   const csv = (rows, name) => { try { window.__igxCsv.downloadCSV(rows, name); } catch (e) { toast('Export করা যায়নি', 'error'); } };
   function exportSm() {
-    const rows = [['Salesman', 'মোট অর্ডার', 'Delivered', 'চলমান', 'ফেল', 'বিক্রয়', 'প্রতি সেল', 'কমিশন', 'মাসিক বেতন', 'মোট প্রদেয়', 'সময়']];
-    SM.rows.filter(t => !t.none).forEach(t => rows.push([t.name, t.total, t.delivered, t.running, t.failed, t.sales, t.perSale, t.commission, t.paySalary, t.payable, periodLabel()]));
-    csv(rows, `salesmen_${SM.ym || 'all'}.csv`);
+    const rows = [['Salesman', 'মোট অর্ডার', 'Delivered', 'চলমান', 'ফেল', 'বিক্রয়', 'প্রতি সেল', 'কমিশন', 'বেতন', 'মোট প্রদেয়', 'পরিশোধ', 'বাকি পাওনা', 'সময়']];
+    SM.rows.filter(t => !t.none).forEach(t => rows.push([t.name, t.total, t.delivered, t.running, t.failed, t.sales, t.perSale, t.commission, t.paySalary, t.payable, t.paid, t.remaining, periodLabel()]));
+    csv(rows, `salesmen_${(SM.f.ym || 'all')}.csv`);
   }
   function printHtml(title, sub, head, bodyRows, foot) {
     const w = window.open('', '_blank'); if (!w) { toast('পপ-আপ ব্লক করা আছে — অনুমতি দিন', 'error'); return; }
@@ -17554,10 +17700,12 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
   }
   function printSm() {
     const R = SM.rows.filter(t => !t.none);
-    const th = ['Salesman', 'অর্ডার', 'Delivered', 'ফেল', 'বিক্রয়', 'প্রতি সেল', 'কমিশন', 'বেতন', 'মোট প্রদেয়'].map((h, i) => `<th class="${i ? 'r' : ''}">${h}</th>`).join('');
-    const rows = R.map(t => `<tr><td>${esc(t.name)}</td><td class="r">${t.total}</td><td class="r">${t.delivered}</td><td class="r">${t.failed}</td><td class="r">${tk(t.sales)}</td><td class="r">${tk(t.perSale)}</td><td class="r">${tk(t.commission)}</td><td class="r">${SM.ym ? tk(t.paySalary) : '—'}</td><td class="r"><b>${tk(t.payable)}</b></td></tr>`).join('');
+    const th = ['Salesman', 'অর্ডার', 'Delivered', 'ফেল', 'বিক্রয়', 'কমিশন', 'বেতন', 'মোট প্রদেয়', 'পরিশোধ', 'বাকি পাওনা'].map((h, i) => `<th class="${i ? 'r' : ''}">${h}</th>`).join('');
+    const rows = R.map(t => `<tr><td>${esc(t.name)}</td><td class="r">${t.total}</td><td class="r">${t.delivered}</td><td class="r">${t.failed}</td><td class="r">${tk(t.sales)}</td><td class="r">${tk(t.commission)}</td><td class="r">${tk(t.paySalary)}</td><td class="r"><b>${tk(t.payable)}</b></td><td class="r">${tk(t.paid)}</td><td class="r"><b>${tk(t.remaining)}</b></td></tr>`).join('');
     const sum = k => R.reduce((a, t) => a + t[k], 0);
-    printHtml('Salesman Payment Sheet', `${periodLabel()} · প্রিন্ট: ${new Date().toLocaleDateString('en-GB')}`, th, rows, `<tr><td>মোট</td><td class="r">${sum('total')}</td><td class="r">${sum('delivered')}</td><td class="r">${sum('failed')}</td><td class="r">${tk(sum('sales'))}</td><td></td><td class="r">${tk(sum('commission'))}</td><td class="r">${SM.ym ? tk(sum('paySalary')) : '—'}</td><td class="r">${tk(sum('payable'))}</td></tr>`);
+    const pays = R.reduce((a, t) => a.concat(t.pays), []).sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+    const payRows = pays.length ? `<tr><td colspan="10" style="padding-top:14px;"><b>পরিশোধের তালিকা</b></td></tr>` + pays.map(p => `<tr><td>${esc(p.salesman)}</td><td colspan="2">${esc(p.date)}</td><td colspan="2">${esc(monthLabel(payYM(p)))}</td><td colspan="4">${esc(p.note) || '—'}</td><td class="r">${tk(p.amount)}</td></tr>`).join('') : '';
+    printHtml('Salesman Payment Sheet', `${periodLabel()} · প্রিন্ট: ${new Date().toLocaleDateString('en-GB')}`, th, rows + payRows, `<tr><td>মোট</td><td class="r">${sum('total')}</td><td class="r">${sum('delivered')}</td><td class="r">${sum('failed')}</td><td class="r">${tk(sum('sales'))}</td><td class="r">${tk(sum('commission'))}</td><td class="r">${tk(sum('paySalary'))}</td><td class="r">${tk(sum('payable'))}</td><td class="r">${tk(sum('paid'))}</td><td class="r">${tk(sum('remaining'))}</td></tr>`);
   }
 
   // ───────── বাকি পেজ ─────────
@@ -17698,7 +17846,7 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
       const t = bakiTotals();
       if ($('kpi-baki')) { $('kpi-baki').textContent = num(t.due); $('kpi-baki-sub').textContent = t.n ? `${t.n}টি Delivered অর্ডারে বাকি` : 'কোনো বাকি নেই'; }
       if ($('kpi-top-salesman')) {
-        const saved = SM.ym; SM.ym = todayYM(); const rows = compute().filter(r => !r.none && r.total > 0); SM.ym = saved;
+        const rows = compute({ sm: '', ym: todayYM(), from: '', to: '' }).filter(r => !r.none && r.total > 0);
         const top = rows[0];
         $('kpi-top-salesman').textContent = top ? top.name : '—';
         $('kpi-top-salesman-sub').textContent = top ? `এই মাস: ✅ ${top.delivered} · ❌ ${top.failed} · মোট ${top.total}` : 'এই মাসে কোনো Salesman-এর অর্ডার নেই';
@@ -17725,7 +17873,7 @@ table{width:100%;border-collapse:collapse}th{background:#0f2a5c;color:#fff;text-
     pageTitles.salesmen = ['Salesmen', '— বিক্রয়কর্মী ট্র্যাকিং ও বেতন'];
     pageTitles.baki = ['বাকি (Due)', '— ডেলিভারি হয়েছে কিন্তু টাকা বাকি'];
   }
-  Object.assign(window, { smOpenPage: openPage, smReload: reload, smPeriod: v => { SM.ym = v || ''; render(); }, smAll: () => { SM.ym = ''; render(); }, smThisMonth: () => { SM.ym = todayYM(); render(); },
+  Object.assign(window, { smOpenPage: openPage, smReload: reload, smSet: setF, smClear: clearF, smThisMonth: () => { SM.f = { sm: SM.f.sm, ym: todayYM(), from: '', to: '' }; render(); }, smKpi: kpi, smPay: openPay, smPayInfo: payInfo, smPaySave: paySave, smHist: hist, smPayDel: payDel,
     smDrill: drill, smOpenEdit: openEdit, smSave: save, smDelete: del, smExport: exportSm, smOpenImport: openImp, smImpRead: impRead, smImpGo: impGo, smSampleCSV: smSample, smPrint: printSm, smFillOrderSelect: fillOrderSelect, smLoad: loadSalesmen,
     bakiOpenPage, bakiReload, bakiRender, bakiEdit, bakiCollect, bakiCPrev, bakiCSave, bakiExport, bakiPrint });
 })();
